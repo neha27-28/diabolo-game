@@ -1,0 +1,88 @@
+<html>
+<head>
+    <!-- Character encoding for the webpage -->
+    <meta charset="utf-8">
+
+    <!-- Make the webpage responsive on mobile devices -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <!-- Title shown in the browser tab -->
+    <title>Crablo</title>
+
+    <style>
+        /* Remove the default margin and padding from all elements */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Style the webpage background and center the game canvas */
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+
+            /* Prevent scrolling and pinch-to-zoom while playing */
+            touch-action: none;
+        }
+
+        /* Make the game canvas fill the entire screen */
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Canvas where the game will be rendered -->
+    <canvas id="glcanvas" tabindex="1"></canvas>
+
+    <!-- Load the JavaScript runtime required by Macroquad -->
+    <script src="https://not-fl3.github.io/miniquad-samples/gl.js"></script>
+
+    <script>
+        // Get a reference to the game canvas
+        var canvas = document.getElementById("glcanvas");
+
+        // Resize the canvas to match the current screen size
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // Set the initial canvas size
+        resize();
+
+        // Resize the canvas automatically whenever the browser window changes size
+        window.addEventListener("resize", resize);
+
+        // Prevent the browser's default touch actions such as scrolling and zooming
+        // so that touch input is used only for the game.
+        canvas.addEventListener("touchstart", function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener("touchmove", function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener("touchend", function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        // Disable the right-click context menu on the canvas
+        canvas.addEventListener("contextmenu", function(e) {
+            e.preventDefault();
+        });
+
+        // Load and start the WebAssembly version of the game
+        load("crablo.wasm");
+    </script>
+</body>
+</html>
