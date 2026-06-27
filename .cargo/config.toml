@@ -1,0 +1,17 @@
+# This section applies only when compiling for the WebAssembly target named wasm32-unknown-unknown.
+
+#wasm32 -> 32-bit WebAssembly architecture.
+#First unknown -> Unknown vendor.
+#Second unknown -> Unknown operating system.
+
+#This is the standard target for compiling Rust to WebAssembly (WASM).
+
+[target.wasm32-unknown-unknown]
+# Normally, when Rust creates a WebAssembly module, the linker expects every function and symbol to be defined.
+
+
+#-C means compiler code generation option.
+#link-args=... passes additional arguments to the linker.
+rustflags=[
+    "-C", "link-args=--import-undefined",
+]
