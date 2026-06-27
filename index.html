@@ -48,12 +48,12 @@
 
     <script>
         // Get a reference to the game canvas
-        var canvas = document.getElementById("glcanvas");
+        var gamecanvas = document.getElementById("glcanvas");
 
         // Resize the canvas to match the current screen size
         function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            gamecanvas.width = window.innerWidth;
+            gamecanvas.height = window.innerHeight;
         }
 
         // Set the initial canvas size
@@ -64,20 +64,20 @@
 
         // Prevent the browser's default touch actions such as scrolling and zooming
         // so that touch input is used only for the game.
-        canvas.addEventListener("touchstart", function(e) {
+        gamecanvas.addEventListener("touchstart", function(e) {
             e.preventDefault();
         }, { passive: false });
 
-        canvas.addEventListener("touchmove", function(e) {
+        gamecanvas.addEventListener("touchmove", function(e) {
             e.preventDefault();
         }, { passive: false });
 
-        canvas.addEventListener("touchend", function(e) {
+        gamecanvas.addEventListener("touchend", function(e) {
             e.preventDefault();
         }, { passive: false });
 
         // Disable the right-click context menu on the canvas
-        canvas.addEventListener("contextmenu", function(e) {
+        gamecanvas.addEventListener("contextmenu", function(e) {
             e.preventDefault();
         });
 
