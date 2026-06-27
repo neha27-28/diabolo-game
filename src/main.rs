@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use ::std::collections::VecDeque;
 use macroquad::prelude::*;
+use std::{collections::btree_map::Entry::Occupied, iter::once};
 
 const MAP: usize = 20;
 const T_SIZE: (f32, f32) = (32., 16.);
@@ -571,7 +572,52 @@ impl Game {
 
         //Monster logic
         //calculate the occupied spots so enemies dont stack
-        //let
+        //we have all the monsters
+        //mapped thru each monster
+        //chain them once with the position of the player
+        //collects everything inside a new vector
+        //to have vector of all the occupied tiles
+        let occupied: Vec<_> = self
+            .monsters
+            .iter()
+            .map(|m| (m.x, m.y))
+            .chain(std::iter::once((self.px, self.py)))
+            .collect();
+
+        for i in 0..self.monsters.len() {
+            self.monsters[i].cd -= dt;
+            if self.monsters[i].cd <= 0. {
+                self.monsters[i].cd = 1.0; //slower than the player
+
+                let (mx, my) = (self.monsters[i].x, self.monsters[i].y);
+                let d = dist((mx, my), (self.px, self.py));
+
+                //depending on the distance we will have diff things
+                // If the monster is next to the player, attack the player.
+                if d == 1 {
+                    // Reduce the player's health.
+                    self.hp -= 5;
+
+                    // Convert the player's tile position to screen coordinates.
+                    let (sx, sy) = to_screen(self.px, self.py, self.cam);
+
+                    // Add a floating damage text above the player.
+                    self.texts.push(DmgText {
+                        x: sx,
+                        y: sy - 40.,
+                        dmg: 5,
+                        life: 1.,
+                    });
+                } else {
+                    //chase the player
+                    let path = bfs(&self.map, (mx, my), (self.px, self.py));
+                    if path.len() > 1 && !occupied.contains(&path[0]) {
+                        self.monsters[i].x = path[0].0;
+                        self.monsters[i].y = path[0].1;
+                    }
+                }
+            }
+        }
 
         false
     }
@@ -634,6 +680,15 @@ impl Game {
         for t in &self.texts {
             draw_text(&format!("-{}", t.dmg), t.x, t.y, 20., RED);
         }
+
+        //HUD-heads on display
+        draw_text(
+            &format!("HP: {}", self.hp),
+            20.,
+            screen_height() - 40.,
+            30.,
+            BLACK,
+        );
     }
 }
 
@@ -678,6 +733,9 @@ async fn main() {
                     Color::new(1., 1., 1., 0.7),
                 );
                 draw_text("GAME OVER", 100., 100., 60., RED);
+
+                draw_text(&format!("HP:{}", game.hp), 100., 160., 30., BLACK);
+
                 draw_text("Enter to reset", 100., 150., 20., GRAY);
 
                 if is_key_pressed(KeyCode::Enter) {
