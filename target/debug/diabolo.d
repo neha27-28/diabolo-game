@@ -1,1 +1,1 @@
-D:\neha\RUST\rust-projects\diabolo\target\debug\diabolo.exe: D:\neha\RUST\rust-projects\diabolo\src\main.rs
+D:\neha\RUST\rust-projects\crablo\target\debug\diabolo.exe: D:\neha\RUST\rust-projects\crablo\src\main.rs
