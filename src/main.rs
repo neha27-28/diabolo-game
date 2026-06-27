@@ -453,6 +453,8 @@ struct Game {
     monsters: Vec<Monster>,
     texts: Vec<DmgText>,
     hp: i32,
+    gold: Vec<(usize, usize)>,
+    score: i32,
 }
 
 //creating a class
@@ -504,13 +506,15 @@ impl Game {
             ],
             texts: vec![],
             hp: 100,
+            score: 0,
+            gold: vec![(3, 3), (10, 2), (16, 5), (6, 14), (17, 17)],
         }
     }
 
     //_dt is data type of 32 bit integer
     fn update(&mut self, dt: f32) -> bool {
         //if player has 0 pt, return true, the game is over
-        if self.hp <= 0 {
+        if self.hp <= 0 || self.monsters.is_empty() {
             return true;
         }
 
@@ -566,6 +570,20 @@ impl Game {
                     self.path.remove(0);
                     self.px = nx;
                     self.py = ny;
+
+                    if let Some(i) = self.gold.iter().position(|&g| g == (self.px, self.py)) {
+                        self.gold.remove(i);
+                        self.score += 100;
+
+                        //spawn a green text
+                        let (sx, sy) = to_screen(self.px, self.py, self.cam);
+                        self.texts.push(DmgText {
+                            x: (sx),
+                            y: (sy - 4.),
+                            dmg: (-100),
+                            life: (1.),
+                        });
+                    }
                 }
             }
         }
@@ -643,6 +661,9 @@ impl Game {
         //// If the monster has no health left, remove it from the game.
         if self.monsters[idx].hp <= 0 {
             self.monsters.remove(idx);
+
+            //50 bonus if we kill a monster
+            self.score += 50;
         }
     }
 
@@ -656,8 +677,13 @@ impl Game {
                     draw_wall(x, y, self.cam);
                 } else {
                     //draw a dot with circle shape
-                    let (sx, sy) = to_screen(x, y, self.cam);
-                    draw_circle(sx, sy + 16., 2., LIGHTGRAY);
+                    if self.gold.contains(&(x, y)) {
+                        let (sx, sy) = to_screen(x, y, self.cam);
+                        draw_circle(sx, sy + 16., 6., GOLD);
+                    } else {
+                        let (sx, sy) = to_screen(x, y, self.cam);
+                        draw_circle(sx, sy + 16., 2., LIGHTGRAY);
+                    }
                 }
             }
         }
@@ -678,7 +704,11 @@ impl Game {
 
         //draw floating text
         for t in &self.texts {
-            draw_text(&format!("-{}", t.dmg), t.x, t.y, 20., RED);
+            if t.dmg < 0 {
+                draw_text(&format!("+{}", -t.dmg), t.x, t.y, 20., GREEN);
+            } else {
+                draw_text(&format!("-{}", t.dmg), t.x, t.y, 20., RED);
+            }
         }
 
         //HUD-heads on display
@@ -686,6 +716,13 @@ impl Game {
             &format!("HP: {}", self.hp),
             20.,
             screen_height() - 40.,
+            30.,
+            BLACK,
+        );
+        draw_text(
+            &format!("SCORE: {}", self.score),
+            20.,
+            screen_height() - 70.,
             30.,
             BLACK,
         );
@@ -732,11 +769,37 @@ async fn main() {
                     screen_height(),
                     Color::new(1., 1., 1., 0.7),
                 );
-                draw_text("GAME OVER", 100., 100., 60., RED);
 
-                draw_text(&format!("HP:{}", game.hp), 100., 160., 30., BLACK);
+                //Victory vs defeat logic
+                let (msg, col) = if game.hp > 0 {
+                    ("VICTORY", GOLD)
+                } else {
+                    ("GAME OVER", RED)
+                };
 
-                draw_text("Enter to reset", 100., 150., 20., GRAY);
+                draw_text(
+                    msg,
+                    screen_width() / 2. - 100.,
+                    screen_height() / 2.,
+                    60.,
+                    col,
+                );
+
+                draw_text(
+                    &format!("Final Score :{}", game.score),
+                    screen_width() / 2. - 80.,
+                    screen_height() / 2. + 50.,
+                    30.,
+                    BLACK,
+                );
+
+                draw_text(
+                    "Enter to reset",
+                    screen_width() / 2.,
+                    -80.,
+                    screen_height() / 2. + 90.,
+                    GRAY,
+                );
 
                 if is_key_pressed(KeyCode::Enter) {
                     state = AppState::Menu
