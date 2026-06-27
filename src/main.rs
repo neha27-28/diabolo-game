@@ -22,7 +22,16 @@ struct Monster {
     x: usize,
     y: usize,
     hp: i32,
-    cd: i32,
+    cd: f32,
+}
+
+//struct for floating text
+//dmg theplayer
+struct DmgText {
+    x: f32,
+    y: f32,
+    dmg: i32,
+    life: f32, //lifetime of the floating text
 }
 
 //Math helper
@@ -40,6 +49,11 @@ fn to_tile(sx: f32, sy: f32, cam: (f32, f32)) -> (usize, usize) {
         ((ax / T_SIZE.0 + ay / T_SIZE.1) / 2.) as usize, //convert the screen coordinates back to tile coordinates using the tile size and camera position
         ((ay / T_SIZE.1 - ax / T_SIZE.0) / 2.) as usize,
     )
+}
+
+//calculate distance Manhattan distance
+fn dist(p1: (usize, usize), p2: (usize, usize)) -> i32 {
+    (p1.0 as i32 - p2.0 as i32).abs() + (p1.1 as i32 - p2.1 as i32).abs()
 }
 
 //pathfinding algo- bfs
@@ -436,6 +450,8 @@ struct Game {
     //cd is cooldown timer-.15s
     player_cd: f32,
     monsters: Vec<Monster>,
+    texts: Vec<DmgText>,
+    hp: i32,
 }
 
 //creating a class
@@ -470,30 +486,39 @@ impl Game {
                     x: 8,
                     y: 8,
                     hp: 30,
-                    cd: 0,
+                    cd: 0.,
                 },
                 Monster {
                     x: 12,
                     y: 4,
                     hp: 30,
-                    cd: 0,
+                    cd: 0.,
                 },
                 Monster {
                     x: 15,
                     y: 12,
                     hp: 30,
-                    cd: 0,
+                    cd: 0.,
                 },
             ],
+            texts: vec![],
+            hp: 100,
         }
     }
 
     //_dt is data type of 32 bit integer
     fn update(&mut self, dt: f32) -> bool {
-        //fake gaming logic
-        if is_key_pressed(KeyCode::Space) {
+        //if player has 0 pt, return true, the game is over
+        if self.hp <= 0 {
             return true;
         }
+
+        //update text animations
+        self.texts.retain_mut(|t| {
+            t.life -= dt;
+            t.y -= 20. * dt;
+            t.life > 0.
+        });
 
         //mouse button pressed, and get the mouse position
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -520,20 +545,61 @@ impl Game {
                 // Reset the cooldown before the next movement.
                 self.player_cd = 0.15;
 
-                // Get the next tile in the computed path.
-                let next_step = self.path[0];
+                let (nx, ny) = self.path[0];
 
-                // Move the player to the next tile.
-                self.px = next_step.0;
-                self.py = next_step.1;
+                //combat logic for the player
+                /*
+                --iter() - Goes through all the monsters one by one.
+                --position(...) - Finds the index of the first monster that satisfies the condition.
+                --|m| m.x == nx && m.y == ny - Checks whether the monster is at (nx, ny).
+                --if let Some(i) - If such a monster exists, its index is stored in i. If no monster is found (None), the if block is skipped.
+                */
+                if let Some(i) = self.monsters.iter().position(|m| m.x == nx && m.y == ny) {
+                    //attack
+                    self.damage_monster(i, 10);
 
-                // Remove the tile that was just reached so the next update
-                // will move the player to the following step in the path.
-                self.path.remove(0);
+                    //stop moving
+                    self.path.clear();
+                } else {
+                    //move
+                    self.path.remove(0);
+                    self.px = nx;
+                    self.py = ny;
+                }
             }
         }
+
+        //Monster logic
+        //calculate the occupied spots so enemies dont stack
+        //let
+
         false
     }
+
+    //helper to damage monsters
+    fn damage_monster(&mut self, idx: usize, amount: i32) {
+        //reduce life of monsters
+        self.monsters[idx].hp -= amount;
+
+        //spawn text
+        //// Convert the monster's tile position to screen coordinates.
+        let (sx, sy) = to_screen(self.monsters[idx].x, self.monsters[idx].y, self.cam);
+
+        //// Add a floating damage text that appears above the monster.
+        self.texts.push(DmgText {
+            x: (sx),
+            y: (sy - 40.),
+            dmg: (amount),
+            life: (1.),
+        });
+
+        //kill logic
+        //// If the monster has no health left, remove it from the game.
+        if self.monsters[idx].hp <= 0 {
+            self.monsters.remove(idx);
+        }
+    }
+
     //creating a function to draw the game state
     fn draw(&self) {
         //populating the map with walls and floors
@@ -562,6 +628,11 @@ impl Game {
         //draw monsters
         for m in &self.monsters {
             draw_stickman(m.x, m.y, self.cam, true);
+        }
+
+        //draw floating text
+        for t in &self.texts {
+            draw_text(&format!("-{}", t.dmg), t.x, t.y, 20., RED);
         }
     }
 }
