@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use ::std::collections::VecDeque;
 use macroquad::prelude::*;
-use std::{collections::btree_map::Entry::Occupied, iter::once};
+//use std::{collections::btree_map::Entry::Occupied, iter::once};
 
 const MAP: usize = 20;
 const T_SIZE: (f32, f32) = (32., 16.);
@@ -55,6 +55,16 @@ fn to_tile(sx: f32, sy: f32, cam: (f32, f32)) -> (usize, usize) {
 //calculate distance Manhattan distance
 fn dist(p1: (usize, usize), p2: (usize, usize)) -> i32 {
     (p1.0 as i32 - p2.0 as i32).abs() + (p1.1 as i32 - p2.1 as i32).abs()
+}
+
+// _+==== calculate camera dynamically based on screen size=============
+fn calc_cam() -> (f32, f32) {
+    let map_w = (MAP as f32) * T_SIZE.0; // total map width in pixels
+    let map_h = (MAP as f32) * T_SIZE.1; // total map height in pixels
+    (
+        screen_width() / 2.0,                  // horizontally centered
+        (screen_height() - map_h) / 2.0 + 16., // vertically centered with small top offset
+    )
 }
 
 //pathfinding algo- bfs
@@ -479,7 +489,7 @@ impl Game {
         Game {
             map,
             //setting the camera position to the center of the screen
-            cam: (screen_width() / 2.0, 50.),
+            cam: calc_cam(), //dyamic acc to the screen size
             px: 2,
             py: 2,
             path: vec![],
@@ -513,6 +523,9 @@ impl Game {
 
     //_dt is data type of 32 bit integer
     fn update(&mut self, dt: f32) -> bool {
+        //update camers every frame so it always fits the screen
+        self.cam = calc_cam();
+
         //if player has 0 pt, return true, the game is over
         if self.hp <= 0 || self.monsters.is_empty() {
             return true;
@@ -608,6 +621,7 @@ impl Game {
                 self.monsters[i].cd = 1.0; //slower than the player
 
                 let (mx, my) = (self.monsters[i].x, self.monsters[i].y);
+
                 let d = dist((mx, my), (self.px, self.py));
 
                 //depending on the distance we will have diff things
@@ -669,6 +683,8 @@ impl Game {
 
     //creating a function to draw the game state
     fn draw(&self) {
+        //sclae HUD font size based on screen widht
+        let hud_size = (screen_width() * 0.05).clamp(18., 36.);
         //populating the map with walls and floors
         for y in 0..MAP {
             for x in 0..MAP {
@@ -676,12 +692,11 @@ impl Game {
                     //draw the wall at the given x and y coordinates, using the camera position to adjust the screen coordinates
                     draw_wall(x, y, self.cam);
                 } else {
+                    let (sx, sy) = to_screen(x, y, self.cam);
                     //draw a dot with circle shape
                     if self.gold.contains(&(x, y)) {
-                        let (sx, sy) = to_screen(x, y, self.cam);
                         draw_circle(sx, sy + 16., 6., GOLD);
                     } else {
-                        let (sx, sy) = to_screen(x, y, self.cam);
                         draw_circle(sx, sy + 16., 2., LIGHTGRAY);
                     }
                 }
@@ -716,14 +731,13 @@ impl Game {
             &format!("HP: {}", self.hp),
             20.,
             screen_height() - 40.,
-            30.,
+            hud_size,
             BLACK,
         );
         draw_text(
             &format!("SCORE: {}", self.score),
             20.,
-            screen_height() - 70.,
-            30.,
+            screen_height() - 40.-hud_size-4.,   hud_size,
             BLACK,
         );
     }
@@ -739,12 +753,19 @@ async fn main() {
     loop {
         clear_background(WHITE);
 
+        // Scale menu font based on screen size
+        let title_size = (screen_width() * 0.07).clamp(24., 60.);
+        let sub_size   = (screen_width() * 0.04).clamp(16., 32.);
+
+
         match state {
             AppState::Menu => {
-                draw_text("Menu- Enter to start", 100., 100., 40., BLACK);
+                let msg = "Tap or press Enter to start";
+                let tx = screen_width() / 2. - (msg.len() as f32 * title_size * 0.3) / 2.;
+                draw_text(msg, tx, screen_height() / 2., title_size, BLACK);
 
                 //if the user presses enter, change the state to playing
-                if is_key_pressed(KeyCode::Enter) {
+                if is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left){
                     game = Game::new();
                     state = AppState::Playing;
                 }
@@ -781,27 +802,26 @@ async fn main() {
                     msg,
                     screen_width() / 2. - 100.,
                     screen_height() / 2.,
-                    60.,
+                    title_size,
                     col,
                 );
 
                 draw_text(
                     &format!("Final Score :{}", game.score),
                     screen_width() / 2. - 80.,
-                    screen_height() / 2. + 50.,
-                    30.,
+                    screen_height() / 2. + title_size+10.,
+                    sub_size,
                     BLACK,
                 );
 
                 draw_text(
-                    "Enter to reset",
-                    screen_width() / 2.,
-                    -80.,
-                    screen_height() / 2. + 90.,
-                    GRAY,
+                    "Tap or press Enter to restart",
+                    screen_width() / 2. - 100.,
+                    screen_height() / 2. + title_size + sub_size + 20.,
+                    sub_size, GRAY
                 );
 
-                if is_key_pressed(KeyCode::Enter) {
+                if is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left) {
                     state = AppState::Menu
                 }
             }
