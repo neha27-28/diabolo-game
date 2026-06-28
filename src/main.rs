@@ -59,11 +59,21 @@ fn dist(p1: (usize, usize), p2: (usize, usize)) -> i32 {
 
 // _+==== calculate camera dynamically based on screen size=============
 fn calc_cam() -> (f32, f32) {
-    let map_w = (MAP as f32) * T_SIZE.0; // total map width in pixels
-    let map_h = (MAP as f32) * T_SIZE.1; // total map height in pixels
+    //isometric diamond is 2*MAP tiles wide and 2*MAP tiles tall
+    let map_pixel_w = (MAP as f32) * 2. * T_SIZE.0; //1280px
+    let map_pixel_h = (MAP as f32) * 2. * T_SIZE.1; //640px
+
+    let sw = screen_width();
+    let sh = screen_height();
+
+    //scale down if map is bigger than screen
+    let scale_x = sw / map_pixel_w;
+    let scale_y = sh / map_pixel_h;
+    let _ = scale_x.min(scale_y); //smallest scale fits both axes
+
     (
-        screen_width() / 2.0,                  // horizontally centered
-        (screen_height() - map_h) / 2.0 + 16., // vertically centered with small top offset
+        sw / 2.0,                            //horizontally centerd
+        (sh - map_pixel_h) / 2.0 + T_SIZE.1, //vertically centered
     )
 }
 
@@ -737,7 +747,8 @@ impl Game {
         draw_text(
             &format!("SCORE: {}", self.score),
             20.,
-            screen_height() - 40.-hud_size-4.,   hud_size,
+            screen_height() - 40. - hud_size - 4.,
+            hud_size,
             BLACK,
         );
     }
@@ -755,17 +766,37 @@ async fn main() {
 
         // Scale menu font based on screen size
         let title_size = (screen_width() * 0.07).clamp(24., 60.);
-        let sub_size   = (screen_width() * 0.04).clamp(16., 32.);
-
+        let sub_size = (screen_width() * 0.04).clamp(16., 32.);
 
         match state {
             AppState::Menu => {
-                let msg = "Tap or press Enter to start";
-                let tx = screen_width() / 2. - (msg.len() as f32 * title_size * 0.3) / 2.;
-                draw_text(msg, tx, screen_height() / 2., title_size, BLACK);
+                let font_size = (screen_width() * 0.06).clamp(20., 48.);
+                let sub_size = (screen_width() * 0.04).clamp(14., 28.);
+
+                let title = "CRABLO";
+                let sub = "Click or tap to start";
+
+                let title_w = title.len() as f32 * font_size * 0.6;
+                let sub_w = sub.len() as f32 * sub_size * 0.5;
+
+                draw_text(
+                    title,
+                    screen_width() / 2. - title_w / 2.,
+                    screen_height() / 2. - font_size,
+                    font_size,
+                    BLACK,
+                );
+
+                draw_text(
+                    sub,
+                    screen_width() / 2. - sub_w / 2.,
+                    screen_height() / 2. + sub_size,
+                    sub_size,
+                    GRAY,
+                );
 
                 //if the user presses enter, change the state to playing
-                if is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left){
+                if is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left) {
                     game = Game::new();
                     state = AppState::Playing;
                 }
@@ -791,6 +822,9 @@ async fn main() {
                     Color::new(1., 1., 1., 0.7),
                 );
 
+                let title_size = (screen_width() * 0.08).clamp(28., 60.);
+                let sub_size = (screen_width() * 0.045).clamp(16., 32.);
+
                 //Victory vs defeat logic
                 let (msg, col) = if game.hp > 0 {
                     ("VICTORY", GOLD)
@@ -798,27 +832,33 @@ async fn main() {
                     ("GAME OVER", RED)
                 };
 
+                //center each line of text
                 draw_text(
                     msg,
-                    screen_width() / 2. - 100.,
-                    screen_height() / 2.,
+                    screen_width() / 2. - msg.len() as f32 * title_size * 0.3,
+                    screen_height() / 2. - title_size,
                     title_size,
                     col,
                 );
 
+                //----score msg---
+                let score_msg = format!("Score: {}", game.score);
                 draw_text(
-                    &format!("Final Score :{}", game.score),
-                    screen_width() / 2. - 80.,
-                    screen_height() / 2. + title_size+10.,
+                    &score_msg,
+                    screen_width() / 2. - score_msg.len() as f32 * sub_size * 0.3,
+                    screen_height() / 2.,
                     sub_size,
                     BLACK,
                 );
 
+                //---restart----
+                let restart_msg = "Tap to restart";
                 draw_text(
-                    "Tap or press Enter to restart",
-                    screen_width() / 2. - 100.,
-                    screen_height() / 2. + title_size + sub_size + 20.,
-                    sub_size, GRAY
+                    restart_msg,
+                    screen_width() / 2. - restart_msg.len() as f32 * sub_size * 0.3,
+                    screen_height() / 2. + sub_size + 12.,
+                    sub_size,
+                    GRAY,
                 );
 
                 if is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left) {
