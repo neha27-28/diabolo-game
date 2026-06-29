@@ -10,7 +10,8 @@ You're a little knight. There are goblins. They want to hurt you. Gold is scatte
 
 **[neha27-28.github.io/diabolo-game](https://neha27-28.github.io/diabolo-game)**
 
-No install. No sign-up. Just click and play in your browser.
+No install. No sign-up. Just click and play in your browser. 
+`For seamless experience, play on desktop`
 
 ---
 
